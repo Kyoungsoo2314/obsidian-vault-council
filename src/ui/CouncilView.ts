@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf, TFile, TFolder, MarkdownView, Notice } from 'o
 import VaultCouncilPlugin from '../../main';
 import { Message, ModelResponse } from '../types/types';
 import { OpenRouterService } from '../services/OpenRouterService';
+import { CouncilService, Opinion, Review } from '../services/CouncilService';
 import { SaveManager } from '../vault/SaveManager';
 import { FileSelectorModal } from './FileSelectorModal';
 
@@ -106,15 +107,6 @@ export class CouncilView extends ItemView {
 			cls: 'mod-cta'
 		});
 		sendBtn.addEventListener('click', () => this.sendMessage());
-
-		// Chairman Synthesize button (only if enabled)
-		if (this.plugin.settings.enableChairman && this.plugin.settings.chairmanMode === 'manual') {
-			const synthesizeBtn = buttonContainer.createEl('button', {
-				text: '🎩 Synthesize',
-				cls: 'chairman-btn'
-			});
-			synthesizeBtn.addEventListener('click', () => this.synthesizeResponses());
-		}
 
 		const saveBtn = buttonContainer.createEl('button', {
 			text: 'Save',
@@ -255,140 +247,117 @@ export class CouncilView extends ItemView {
 			return match ? match[1] : '';
 		}).filter(f => f);
 
-		// Build system prompt with context and response style
-		let systemPrompt = 'You are a helpful AI assistant analyzing notes in an Obsidian vault.\n\n';
-
-		// Add response style instruction
-		if (this.plugin.settings.responseStyle === 'concise') {
-			systemPrompt += 'IMPORTANT: Provide a CONCISE response. Maximum 3-5 key points. Be brief and direct.\n\n';
-		} else if (this.plugin.settings.responseStyle === 'detailed') {
-			systemPrompt += 'IMPORTANT: Provide a DETAILED, comprehensive response with thorough analysis.\n\n';
-		}
-		// balanced is default, no special instruction
-
+		// Build context text
+		let contextText = '';
 		if (context.currentFile) {
-			systemPrompt += `Current note: ${context.currentFile}\n`;
-			systemPrompt += `Content:\n${context.currentFileContent}\n\n`;
+			contextText += `Current note: ${context.currentFile}\n`;
+			contextText += `Content:\n${context.currentFileContent}\n\n`;
 		}
-
 		if (context.linkedFiles.length > 0) {
-			systemPrompt += `Linked notes (${context.linkedFiles.length}):\n`;
-			systemPrompt += context.linkedFiles.join('\n\n');
+			contextText += `Linked notes (${context.linkedFiles.length}):\n`;
+			contextText += context.linkedFiles.join('\n\n');
 		}
 
-		if (!context.currentFile && context.linkedFiles.length === 0) {
-			systemPrompt += 'No context available. Please answer the question based on your knowledge.';
-		}
+		// Build full query with context
+		const fullQuery = contextText
+			? `Context from Obsidian vault:\n${contextText}\n\nUser Question: ${question}`
+			: question;
 
-		// Show loading container with progress for each model
-		const loadingContainer = this.conversationEl.createEl('div', {
-			cls: 'vault-council-loading-container'
-		});
-
-		loadingContainer.createEl('div', {
-			cls: 'loading-header',
-			text: `🤖 Consulting ${this.plugin.settings.selectedModels.length} models...`
-		});
-
-		const progressList = loadingContainer.createEl('div', {
-			cls: 'loading-progress-list'
-		});
-
-		// Create progress item for each model
-		const progressItems = new Map<string, HTMLElement>();
-		this.plugin.settings.selectedModels.forEach(modelId => {
-			const modelName = this.getModelDisplayName(modelId);
-			const progressItem = progressList.createEl('div', {
-				cls: 'loading-progress-item'
-			});
-			progressItem.createEl('span', {
-				cls: 'loading-spinner',
-				text: '⏳'
-			});
-			progressItem.createEl('span', {
-				cls: 'loading-model-name',
-				text: modelName
-			});
-			progressItems.set(modelId, progressItem);
-		});
+		// Response style setting
+		const language = 'Korean'; // Could be made configurable
 
 		try {
-			// Create OpenRouter service
-			const service = new OpenRouterService(this.plugin.settings.openRouterApiKey);
+			// Create services
+			const openRouterService = new OpenRouterService(this.plugin.settings.openRouterApiKey);
+			const councilService = new CouncilService(openRouterService);
 
-			// Send to all selected models and update progress
-			const modelPromises = this.plugin.settings.selectedModels.map(async (modelId) => {
-				try {
-					const response = await service.sendMessage(
-						modelId,
-						question,
-						systemPrompt,
-						this.plugin.settings.temperature,
-						this.plugin.settings.maxTokens
-					);
-
-					// Update progress indicator to success
-					const progressItem = progressItems.get(modelId);
-					if (progressItem) {
-						const spinner = progressItem.querySelector('.loading-spinner');
-						if (spinner) spinner.textContent = '✅';
-						progressItem.addClass('completed');
-					}
-
-					return { modelId, response, error: null };
-				} catch (error) {
-					// Update progress indicator to error
-					const progressItem = progressItems.get(modelId);
-					if (progressItem) {
-						const spinner = progressItem.querySelector('.loading-spinner');
-						if (spinner) spinner.textContent = '❌';
-						progressItem.addClass('error');
-					}
-
-					return { modelId, response: '', error: error.message };
-				}
+			// Step 1/3: Get Opinions
+			const loadingStep1 = this.conversationEl.createEl('div', {
+				cls: 'message assistant loading',
+				text: `📝 Step 1/3: Gathering opinions from ${this.plugin.settings.selectedModels.length} council members...`
 			});
 
-			const modelResults = await Promise.all(modelPromises);
+			const opinions = await councilService.getOpinions(
+				this.plugin.settings.selectedModels,
+				fullQuery,
+				language
+			);
 
-			loadingContainer.remove();
+			loadingStep1.remove();
 
-			// Display responses from each model
-			modelResults.forEach(({ modelId, response, error }) => {
-				const modelName = this.getModelDisplayName(modelId);
+			// Display opinions
+			opinions.forEach(opinion => {
+				const modelName = this.getModelDisplayName(opinion.model);
+				this.modelsUsedInSession.add(opinion.model);
 
-				if (error) {
-					this.addMessage({
-						role: 'assistant',
-						content: `Error: ${error}`,
-						model: `${modelName} ❌`,
-						timestamp: Date.now()
-					});
-				} else {
-					// Track successfully used models
-					this.modelsUsedInSession.add(modelId);
-
-					this.addMessage({
-						role: 'assistant',
-						content: response,
-						model: modelName,
-						timestamp: Date.now()
-					});
-				}
+				this.addMessage({
+					role: 'assistant',
+					content: opinion.content,
+					model: `💬 ${modelName}`,
+					timestamp: Date.now()
+				});
 			});
 
-			// Automatically synthesize if chairman mode is 'always'
-			if (this.plugin.settings.enableChairman && this.plugin.settings.chairmanMode === 'always') {
-				await this.synthesizeResponses();
+			// Step 2/3: Get Peer Reviews
+			const loadingStep2 = this.conversationEl.createEl('div', {
+				cls: 'message assistant loading',
+				text: `⚖️ Step 2/3: Council members are peer reviewing...`
+			});
+
+			const reviews = await councilService.getReviews(
+				this.plugin.settings.selectedModels,
+				fullQuery,
+				opinions,
+				language
+			);
+
+			loadingStep2.remove();
+
+			// Display reviews
+			reviews.forEach(review => {
+				const modelName = this.getModelDisplayName(review.reviewer);
+
+				this.addMessage({
+					role: 'assistant',
+					content: review.content,
+					model: `⚖️ Review by ${modelName}`,
+					timestamp: Date.now()
+				});
+			});
+
+			// Step 3/3: Chairman Synthesis
+			if (this.plugin.settings.enableChairman) {
+				const loadingStep3 = this.conversationEl.createEl('div', {
+					cls: 'message assistant loading',
+					text: `🎩 Step 3/3: Chairman (${this.getModelDisplayName(this.plugin.settings.chairmanModel)}) is synthesizing...`
+				});
+
+				const chairmanSynthesis = await councilService.getChairmanSynthesis(
+					this.plugin.settings.chairmanModel,
+					fullQuery,
+					opinions,
+					reviews,
+					language
+				);
+
+				loadingStep3.remove();
+
+				this.hadChairmanSynthesis = true;
+
+				this.addMessage({
+					role: 'assistant',
+					content: chairmanSynthesis,
+					model: '🎩 Chairman Synthesis',
+					timestamp: Date.now()
+				});
 			}
 
 		} catch (error) {
-			loadingContainer.remove();
 			new Notice(`Error: ${error.message}`);
 			this.addMessage({
 				role: 'assistant',
-				content: `Error: ${error.message}`,
-				model: 'System',
+				content: `Error during council meeting: ${error.message}`,
+				model: 'System ❌',
 				timestamp: Date.now()
 			});
 		}
@@ -539,72 +508,6 @@ export class CouncilView extends ItemView {
 			folderPath: activeFile?.parent?.path || null,
 			selectedFiles: []
 		};
-	}
-
-	async synthesizeResponses() {
-		// Collect all assistant messages from current conversation
-		const assistantMessages = this.messages.filter(m => m.role === 'assistant' && m.model && !m.model.includes('Chairman'));
-
-		if (assistantMessages.length === 0) {
-			new Notice('No responses to synthesize');
-			return;
-		}
-
-		// Show loading
-		const loadingEl = this.conversationEl.createEl('div', {
-			cls: 'message assistant loading',
-			text: '🎩 Chairman is synthesizing responses...'
-		});
-
-		try {
-			// Build chairman prompt
-			const chairmanPrompt = `You are the Chairman synthesizing responses from multiple AI models.
-Review these responses and provide a unified, balanced synthesis that:
-1. Identifies key agreements and disagreements
-2. Highlights the most valuable insights
-3. Provides a final recommendation or conclusion
-
-Here are the responses from the council:
-
-${assistantMessages.map(m => `**${m.model}:**\n${m.content}`).join('\n\n---\n\n')}
-
-Please provide a concise synthesis (3-5 key points) followed by your final recommendation.`;
-
-			// Create OpenRouter service
-			const service = new OpenRouterService(this.plugin.settings.openRouterApiKey);
-
-			// Send to chairman model
-			const response = await service.sendMessage(
-				this.plugin.settings.chairmanModel,
-				chairmanPrompt,
-				'You are a Chairman synthesizing multiple expert opinions into actionable insights.',
-				this.plugin.settings.temperature,
-				this.plugin.settings.maxTokens
-			);
-
-			loadingEl.remove();
-
-			// Mark chairman as used
-			this.hadChairmanSynthesis = true;
-
-			// Add chairman synthesis
-			this.addMessage({
-				role: 'assistant',
-				content: response,
-				model: '🎩 Chairman',
-				timestamp: Date.now()
-			});
-
-		} catch (error) {
-			loadingEl.remove();
-			new Notice(`Chairman synthesis failed: ${error.message}`);
-			this.addMessage({
-				role: 'assistant',
-				content: `Error during synthesis: ${error.message}`,
-				model: '🎩 Chairman ❌',
-				timestamp: Date.now()
-			});
-		}
 	}
 
 	// Public method to refresh context (called when hotkey is pressed)

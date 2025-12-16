@@ -1,6 +1,6 @@
 {
   "name": "obsidian-vault-council",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "Multi-AI model collaboration plugin with vault context awareness",
   "main": "main.js",
   "scripts": {
