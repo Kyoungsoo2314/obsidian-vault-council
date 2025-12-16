@@ -48,10 +48,18 @@ export class CouncilView extends ItemView {
 		const switchBtn = titleRow.createEl('button', {
 			text: '⚡',
 			cls: 'vault-switch-btn',
-			attr: { title: 'Reload app (Ctrl+R to switch vault)' }
+			attr: { title: 'Open vault switcher' }
 		});
 		switchBtn.addEventListener('click', () => {
-			new Notice('Tip: Use Ctrl+R or the vault switcher to change vaults');
+			// @ts-ignore - app.setting is not in official API
+			const setting = (this.app as any).setting;
+			if (setting && setting.open) {
+				setting.open();
+				setting.openTabById('file'); // Open Files & Links tab where vault management is
+				new Notice('Navigate to "Manage vaults" to switch vaults');
+			} else {
+				new Notice('Open Settings → Files & Links → Manage vaults to switch vaults');
+			}
 		});
 
 		// Vault info
