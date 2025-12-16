@@ -10,13 +10,21 @@ export class SaveManager {
 	 * @param sourceFile - The file that was used as context (optional)
 	 * @param saveLocation - 'context-based' or 'custom'
 	 * @param customFolder - Custom folder path if saveLocation is 'custom'
+	 * @param linkedFiles - Array of linked files used as context
+	 * @param modelsUsed - Array of model IDs that were used
+	 * @param hadChairman - Whether chairman synthesis was performed
+	 * @param startTime - When the conversation started (for duration calculation)
 	 * @returns The created file
 	 */
 	async saveConversation(
 		messages: Message[],
 		sourceFile: TFile | null,
 		saveLocation: 'context-based' | 'custom',
-		customFolder: string = 'AI Council'
+		customFolder: string = 'AI Council',
+		linkedFiles: string[] = [],
+		modelsUsed: string[] = [],
+		hadChairman: boolean = false,
+		startTime: number = Date.now()
 	): Promise<TFile> {
 		const timestamp = this.getTimestamp();
 		const date = this.getDateString();
@@ -43,8 +51,16 @@ export class SaveManager {
 
 		const filePath = folderPath ? `${folderPath}/${filename}` : filename;
 
-		// Build content
-		const content = this.buildMarkdownContent(messages, sourceFile, date);
+		// Build content with enhanced metadata
+		const content = this.buildMarkdownContent(
+			messages,
+			sourceFile,
+			date,
+			linkedFiles,
+			modelsUsed,
+			hadChairman,
+			startTime
+		);
 
 		// Create file
 		const newFile = await this.app.vault.create(filePath, content);
@@ -60,14 +76,57 @@ export class SaveManager {
 	private buildMarkdownContent(
 		messages: Message[],
 		sourceFile: TFile | null,
-		date: string
+		date: string,
+		linkedFiles: string[] = [],
+		modelsUsed: string[] = [],
+		hadChairman: boolean = false,
+		startTime: number = Date.now()
 	): string {
+		// Calculate metadata
+		const now = Date.now();
+		const sessionDuration = Math.round((now - startTime) / 1000); // seconds
+		const responseCount = messages.filter(m => m.role === 'assistant').length;
+		const conversationId = `conv_${startTime}_${Math.random().toString(36).substring(7)}`;
+
+		// Estimate tokens (rough: ~4 chars per token)
+		const totalChars = messages.reduce((sum, m) => sum + m.content.length, 0);
+		const tokenEstimate = Math.round(totalChars / 4);
+
+		// Categorize question type
+		const firstQuestion = messages.find(m => m.role === 'user')?.content || '';
+		const questionType = this.categorizeQuestion(firstQuestion);
+
+		// Build enhanced YAML frontmatter
 		let content = `---\n`;
 		content += `created: ${new Date().toISOString()}\n`;
-		content += `tags: [ai-council, conversation]\n`;
+		content += `modified: ${new Date().toISOString()}\n`;
+		content += `conversation_id: ${conversationId}\n`;
+		content += `vault_path: "${this.app.vault.getName()}"\n`;
+		content += `tags:\n  - ai-council\n  - conversation\n  - ${questionType}\n`;
+
 		if (sourceFile) {
 			content += `source: "[[${sourceFile.basename}]]"\n`;
 		}
+
+		if (linkedFiles.length > 0) {
+			content += `linked_files:\n`;
+			linkedFiles.forEach(file => {
+				content += `  - "[[${file}]]"\n`;
+			});
+		}
+
+		if (modelsUsed.length > 0) {
+			content += `models_used:\n`;
+			modelsUsed.forEach(model => {
+				content += `  - "${model}"\n`;
+			});
+		}
+
+		content += `chairman_synthesis: ${hadChairman}\n`;
+		content += `response_count: ${responseCount}\n`;
+		content += `token_estimate: ${tokenEstimate}\n`;
+		content += `session_duration_seconds: ${sessionDuration}\n`;
+		content += `question_type: ${questionType}\n`;
 		content += `---\n\n`;
 
 		content += `# AI Council Conversation\n\n`;
@@ -130,5 +189,26 @@ export class SaveManager {
 	private getDateString(): string {
 		const now = new Date();
 		return now.toISOString().split('T')[0];
+	}
+
+	private categorizeQuestion(question: string): string {
+		const lowerQuestion = question.toLowerCase();
+
+		// Simple keyword-based categorization
+		if (lowerQuestion.includes('how') || lowerQuestion.includes('explain') || lowerQuestion.includes('what is')) {
+			return 'explanation';
+		} else if (lowerQuestion.includes('compare') || lowerQuestion.includes('difference') || lowerQuestion.includes('vs')) {
+			return 'comparison';
+		} else if (lowerQuestion.includes('analyze') || lowerQuestion.includes('review')) {
+			return 'analysis';
+		} else if (lowerQuestion.includes('summarize') || lowerQuestion.includes('summary')) {
+			return 'summary';
+		} else if (lowerQuestion.includes('suggest') || lowerQuestion.includes('recommend') || lowerQuestion.includes('should')) {
+			return 'recommendation';
+		} else if (lowerQuestion.includes('create') || lowerQuestion.includes('write') || lowerQuestion.includes('generate')) {
+			return 'creative';
+		} else {
+			return 'general';
+		}
 	}
 }

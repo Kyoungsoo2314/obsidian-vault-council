@@ -8,15 +8,18 @@ Compare responses from the latest AI models (GPT-5.2, Claude 4.5 Opus, Gemini 3 
 
 ### 🎯 Core Features
 - **Sidebar UI**: Persistent conversation panel with full chat history
-- **Context-Aware**: Automatically reads current note + linked files as context
-- **Multi-Model Comparison**: Query multiple AI models in parallel
-- **Smart Save**: Context-based saving next to source notes with automatic backlinking
+- **🎩 Chairman Synthesis**: Unified recommendations from multiple model responses (manual or automatic)
+- **📊 Loading Progress**: Real-time visual feedback for each model's response status
+- **Context-Aware**: Flexible context modes (Auto/Folder/Custom file selection)
+- **Multi-Model Comparison**: Query multiple AI models in parallel with customizable response styles
+- **Smart Save**: Enhanced YAML metadata with conversation tracking, token estimates, and more
 - **OpenRouter Integration**: One API key for all models
 
 ### 🤖 Supported Models (via OpenRouter - December 2025)
 - **OpenAI**: GPT-5.2 🔥, GPT-5, GPT-5 Mini, GPT-4 Turbo, GPT-4
 - **Anthropic**: Claude 4.5 Opus 🔥, Claude 4.5 Sonnet 🔥, Claude Sonnet 4, Claude 3.7 Sonnet, Claude 3.5 Sonnet
 - **Google**: Gemini 3 Pro Preview 🔥, Gemini 2.5 Pro Preview, Gemini 2.5 Flash, Gemini 2.0 Flash
+- **xAI**: Grok 4.1 Fast 🔥, Grok 4, Grok 4 Fast, Grok 3, Grok 3 Mini
 
 ## 📦 Installation
 
@@ -143,7 +146,28 @@ Contributions welcome! Please:
 
 ## 📝 Changelog
 
-### v0.2.0 (December 2025) 🆕
+### v0.3.0 (December 2025) 🆕
+- **🎩 Chairman Feature**: Synthesize multiple model responses into unified recommendations
+  - Manual mode: Click "Synthesize" button when ready
+  - Always mode: Automatic synthesis after all models respond
+- **📊 Loading UI with Progress**: Real-time visual feedback showing which models are responding
+- **📝 Enhanced YAML Metadata**: Rich metadata for saved conversations
+  - Conversation ID, vault path, linked files, models used
+  - Token estimates, session duration, question type categorization
+  - Chairman synthesis tracking
+- **🎯 Response Style Control**: Choose between concise, balanced, or detailed responses
+- **📂 Context Mode**: Three ways to gather context
+  - Auto: Current file + linked files (default)
+  - Folder: All files in a specific folder
+  - Custom: Manual file selection (coming soon)
+- **🌟 xAI Grok Models**: Added support for Grok 4.1 Fast, Grok 4, Grok 3 series
+- **🎨 Improved UI**:
+  - Vault name display with quick switch button
+  - Collapsible model selection (featured models + expandable full list)
+  - Visual loading indicators for each model
+  - Chairman button styling
+
+### v0.2.0 (December 2025)
 - **Updated to latest AI models**: GPT-5.2, Claude 4.5 Opus/Sonnet, Gemini 3 Pro
 - Added support for 17 cutting-edge AI models
 - Updated default selections to newest flagship models

@@ -162,3 +162,146 @@
 .vault-council-buttons button.mod-cta:hover {
 	opacity: 0.9;
 }
+
+/* v0.3.0 - New UI Elements */
+
+/* Header Title Row */
+.vault-council-title-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+/* Vault Switch Button */
+.vault-switch-btn {
+	background: var(--background-modifier-hover);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 4px 8px;
+	cursor: pointer;
+	font-size: 1.1em;
+	transition: all 0.2s;
+}
+
+.vault-switch-btn:hover {
+	background: var(--interactive-accent);
+	transform: scale(1.1);
+}
+
+/* Vault Info Display */
+.vault-council-vault-info {
+	font-size: 0.85em;
+	opacity: 0.7;
+	padding: 4px 8px;
+	background: var(--background-secondary);
+	border-radius: 4px;
+	margin-top: 4px;
+}
+
+/* Chairman Synthesize Button */
+.chairman-btn {
+	background: linear-gradient(135deg, var(--interactive-accent) 0%, var(--interactive-accent-hover) 100%);
+	color: var(--text-on-accent);
+	border: none;
+	font-weight: 600;
+	padding: 6px 16px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.2s;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chairman-btn:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Loading Container with Progress */
+.vault-council-loading-container {
+	background: var(--background-secondary);
+	border-radius: 8px;
+	padding: 12px;
+	margin: 8px 0;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.loading-header {
+	font-weight: 600;
+	margin-bottom: 12px;
+	font-size: 0.95em;
+}
+
+.loading-progress-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.loading-progress-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	background: var(--background-primary);
+	border-radius: 4px;
+	font-size: 0.9em;
+	transition: all 0.3s;
+}
+
+.loading-progress-item.completed {
+	background: var(--background-modifier-success);
+}
+
+.loading-progress-item.error {
+	background: var(--background-modifier-error);
+	opacity: 0.7;
+}
+
+.loading-spinner {
+	font-size: 1.1em;
+	min-width: 20px;
+	text-align: center;
+}
+
+.loading-model-name {
+	flex: 1;
+}
+
+/* Model Selection UI */
+.vault-council-show-more {
+	margin: 12px 0;
+	text-align: center;
+}
+
+.vault-council-toggle-btn {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	padding: 8px 16px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.9em;
+	transition: all 0.2s;
+}
+
+.vault-council-toggle-btn:hover {
+	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+}
+
+.vault-council-additional-models {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.vault-council-provider-section {
+	margin-bottom: 16px;
+}
+
+.vault-council-provider-section h4 {
+	margin: 12px 0 8px 0;
+	font-size: 0.95em;
+	color: var(--text-accent);
+	font-weight: 600;
+}

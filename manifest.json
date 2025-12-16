@@ -1,9 +1,9 @@
 {
   "id": "obsidian-vault-council",
   "name": "Vault Council",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "minAppVersion": "1.0.0",
-  "description": "Multi-AI model collaboration plugin with vault context awareness. Supports GPT-5.2, Claude 4.5, Gemini 3 Pro.",
+  "description": "Multi-AI model collaboration with vault context awareness, Chairman synthesis, loading progress, and flexible context modes.",
   "author": "Kyoungsoo2314",
   "authorUrl": "https://github.com/Kyoungsoo2314",
   "isDesktopOnly": false
