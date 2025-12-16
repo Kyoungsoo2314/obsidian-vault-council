@@ -1,7 +1,7 @@
 {
   "id": "obsidian-vault-council",
   "name": "Vault Council",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "minAppVersion": "1.0.0",
   "description": "Multi-AI model collaboration with vault context awareness, Chairman synthesis, loading progress, and flexible context modes.",
   "author": "Kyoungsoo2314",

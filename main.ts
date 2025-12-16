@@ -51,6 +51,7 @@ export default class VaultCouncilPlugin extends Plugin {
 		const { workspace } = this.app;
 
 		let leaf = workspace.getLeavesOfType(VIEW_TYPE_COUNCIL)[0];
+		const wasAlreadyOpen = !!leaf;
 
 		if (!leaf) {
 			const rightLeaf = workspace.getRightLeaf(false);
@@ -65,6 +66,11 @@ export default class VaultCouncilPlugin extends Plugin {
 
 		if (leaf) {
 			workspace.revealLeaf(leaf);
+
+			// If view was already open, refresh context to show current file
+			if (wasAlreadyOpen && leaf.view instanceof CouncilView) {
+				await (leaf.view as CouncilView).refreshContext();
+			}
 		}
 	}
 }

@@ -3,6 +3,7 @@ import VaultCouncilPlugin from '../../main';
 import { Message, ModelResponse } from '../types/types';
 import { OpenRouterService } from '../services/OpenRouterService';
 import { SaveManager } from '../vault/SaveManager';
+import { FileSelectorModal } from './FileSelectorModal';
 
 export const VIEW_TYPE_COUNCIL = 'vault-council-view';
 
@@ -16,6 +17,7 @@ export class CouncilView extends ItemView {
 	linkedFilesContext: string[] = [];
 	modelsUsedInSession: Set<string> = new Set();
 	hadChairmanSynthesis: boolean = false;
+	selectedCustomFiles: TFile[] = [];
 
 	constructor(leaf: WorkspaceLeaf, plugin: VaultCouncilPlugin) {
 		super(leaf);
@@ -48,17 +50,28 @@ export class CouncilView extends ItemView {
 		const switchBtn = titleRow.createEl('button', {
 			text: '⚡',
 			cls: 'vault-switch-btn',
-			attr: { title: 'Open vault switcher' }
+			attr: { title: 'Open another vault' }
 		});
 		switchBtn.addEventListener('click', () => {
-			// @ts-ignore - app.setting is not in official API
-			const setting = (this.app as any).setting;
-			if (setting && setting.open) {
-				setting.open();
-				setting.openTabById('file'); // Open Files & Links tab where vault management is
-				new Notice('Navigate to "Manage vaults" to switch vaults');
+			// Try to execute the "Open another vault" command
+			// @ts-ignore - app.commands is not in official API
+			const commands = (this.app as any).commands;
+			if (commands && commands.executeCommandById) {
+				try {
+					// Try the standard vault open command
+					commands.executeCommandById('app:open-vault');
+				} catch (e) {
+					// If that fails, try opening command palette
+					try {
+						commands.executeCommandById('command-palette:open');
+						new Notice('Search for "Open another vault" in the palette');
+					} catch (e2) {
+						// Fallback to settings
+						new Notice('Use Ctrl+O or Settings → Files & Links → Manage vaults to switch vaults');
+					}
+				}
 			} else {
-				new Notice('Open Settings → Files & Links → Manage vaults to switch vaults');
+				new Notice('Use Ctrl+O or Settings → Files & Links → Manage vaults to switch vaults');
 			}
 		});
 
@@ -137,18 +150,72 @@ export class CouncilView extends ItemView {
 		this.contextEl.empty();
 
 		const activeFile = this.app.workspace.getActiveFile();
+		const contextMode = this.plugin.settings.contextMode;
 
-		if (activeFile) {
+		// Show context mode info
+		const modeInfo = this.contextEl.createEl('div', { cls: 'context-item' });
+		modeInfo.createEl('span', { text: '🎯 Mode: ', cls: 'context-label' });
+		modeInfo.createEl('span', { text: contextMode.toUpperCase() });
+
+		// Custom Mode: Show file selector and selected files
+		if (contextMode === 'custom') {
+			const selectBtn = this.contextEl.createEl('button', {
+				text: '➕ Select Files',
+				cls: 'mod-cta'
+			});
+			selectBtn.style.marginTop = '8px';
+			selectBtn.style.marginBottom = '8px';
+			selectBtn.addEventListener('click', () => {
+				new FileSelectorModal(this.app, this).open();
+			});
+
+			// Show selected files
+			if (this.selectedCustomFiles.length > 0) {
+				const selectedInfo = this.contextEl.createEl('div', { cls: 'context-item' });
+				selectedInfo.createEl('span', { text: '📎 Selected: ', cls: 'context-label' });
+				selectedInfo.createEl('span', { text: `${this.selectedCustomFiles.length} files` });
+
+				// List of selected files
+				const fileList = this.contextEl.createEl('div', { cls: 'custom-file-list' });
+				fileList.style.marginTop = '8px';
+
+				this.selectedCustomFiles.forEach(file => {
+					const fileItem = fileList.createEl('div', { cls: 'custom-file-item' });
+					fileItem.style.display = 'flex';
+					fileItem.style.alignItems = 'center';
+					fileItem.style.justifyContent = 'space-between';
+					fileItem.style.padding = '4px 8px';
+					fileItem.style.marginBottom = '4px';
+					fileItem.style.background = 'var(--background-secondary)';
+					fileItem.style.borderRadius = '4px';
+
+					const fileName = fileItem.createEl('span', { text: file.basename });
+					const removeBtn = fileItem.createEl('button', { text: '❌', cls: 'custom-file-remove' });
+					removeBtn.style.padding = '2px 6px';
+					removeBtn.style.cursor = 'pointer';
+					removeBtn.addEventListener('click', () => this.removeCustomFile(file));
+				});
+			} else {
+				this.contextEl.createEl('div', {
+					text: 'No files selected. Click "Select Files" to choose files.',
+					cls: 'context-empty'
+				});
+			}
+		}
+		// Auto/Folder modes: Show current file info
+		else if (activeFile) {
 			const fileInfo = this.contextEl.createEl('div', { cls: 'context-item' });
 			fileInfo.createEl('span', { text: '📄 Current: ', cls: 'context-label' });
 			fileInfo.createEl('span', { text: activeFile.basename });
 
-			// Get linked files
-			const cache = this.app.metadataCache.getFileCache(activeFile);
-			if (cache?.links && cache.links.length > 0) {
-				const linksInfo = this.contextEl.createEl('div', { cls: 'context-item' });
-				linksInfo.createEl('span', { text: '🔗 Linked: ', cls: 'context-label' });
-				linksInfo.createEl('span', { text: `${cache.links.length} files` });
+			// Get linked files (Auto mode)
+			if (contextMode === 'auto') {
+				const cache = this.app.metadataCache.getFileCache(activeFile);
+				if (cache?.links && cache.links.length > 0) {
+					const linksInfo = this.contextEl.createEl('div', { cls: 'context-item' });
+					linksInfo.createEl('span', { text: '🔗 Linked: ', cls: 'context-label' });
+					linksInfo.createEl('span', { text: `${cache.links.length} files` });
+				}
 			}
 
 			// Get folder info
@@ -413,6 +480,7 @@ export class CouncilView extends ItemView {
 		this.linkedFilesContext = [];
 		this.modelsUsedInSession.clear();
 		this.hadChairmanSynthesis = false;
+		// Note: selectedCustomFiles is NOT cleared - user may want to keep selections
 	}
 
 	async gatherContext() {
@@ -468,12 +536,11 @@ export class CouncilView extends ItemView {
 				}
 			}
 		} else if (contextMode === 'custom') {
-			// Custom mode: Manual file selection (placeholder for now)
-			// This would require a file picker UI - implement later
-			if (activeFile) {
-				currentFileContent = await this.app.vault.read(activeFile);
+			// Custom mode: Use manually selected files
+			for (const file of this.selectedCustomFiles) {
+				const content = await this.app.vault.read(file);
+				linkedFiles.push(`File: ${file.basename}\n${content}`);
 			}
-			// TODO: Implement file picker UI for manual selection
 		}
 
 		return {
@@ -548,6 +615,33 @@ Please provide a concise synthesis (3-5 key points) followed by your final recom
 				model: '🎩 Chairman ❌',
 				timestamp: Date.now()
 			});
+		}
+	}
+
+	// Public method to refresh context (called when hotkey is pressed)
+	async refreshContext() {
+		await this.updateContext();
+		new Notice('Context updated');
+	}
+
+	// Add file to custom selection
+	addCustomFile(file: TFile) {
+		if (!this.selectedCustomFiles.includes(file)) {
+			this.selectedCustomFiles.push(file);
+			this.updateContext();
+			new Notice(`Added: ${file.basename}`);
+		} else {
+			new Notice(`${file.basename} already selected`);
+		}
+	}
+
+	// Remove file from custom selection
+	removeCustomFile(file: TFile) {
+		const index = this.selectedCustomFiles.indexOf(file);
+		if (index > -1) {
+			this.selectedCustomFiles.splice(index, 1);
+			this.updateContext();
+			new Notice(`Removed: ${file.basename}`);
 		}
 	}
 
