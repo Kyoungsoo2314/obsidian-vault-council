@@ -72,7 +72,7 @@ export class OpenRouterService {
 				headers: {
 					'Authorization': `Bearer ${this.apiKey}`,
 					'Content-Type': 'application/json',
-					'HTTP-Referer': 'https://github.com/yourusername/obsidian-vault-council',
+					'HTTP-Referer': 'https://github.com/Kyoungsoo2314/obsidian-vault-council',
 					'X-Title': 'Obsidian Vault Council'
 				},
 				body: JSON.stringify(requestData)

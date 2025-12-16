@@ -24,12 +24,12 @@ Compare responses from multiple AI models (GPT-4, Claude, Gemini) simultaneously
 
 1. Install [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat)
 2. Open command palette and run "BRAT: Add a beta plugin for testing"
-3. Enter this repository URL: `https://github.com/yourusername/obsidian-vault-council`
+3. Enter this repository URL: `https://github.com/Kyoungsoo2314/obsidian-vault-council`
 4. Enable "Vault Council" in Community Plugins settings
 
 ### Method 2: Manual
 
-1. Download latest release from [Releases](https://github.com/yourusername/obsidian-vault-council/releases)
+1. Download latest release from [Releases](https://github.com/Kyoungsoo2314/obsidian-vault-council/releases)
 2. Extract to `.obsidian/plugins/obsidian-vault-council/`
 3. Reload Obsidian
 4. Enable "Vault Council" in Community Plugins
@@ -38,7 +38,7 @@ Compare responses from multiple AI models (GPT-4, Claude, Gemini) simultaneously
 
 ```bash
 cd /path/to/your/vault/.obsidian/plugins
-git clone https://github.com/yourusername/obsidian-vault-council.git
+git clone https://github.com/Kyoungsoo2314/obsidian-vault-council.git
 cd obsidian-vault-council
 npm install
 npm run dev
@@ -162,5 +162,5 @@ MIT License - see LICENSE file for details
 
 ## 📧 Support
 
-- Report issues: [GitHub Issues](https://github.com/yourusername/obsidian-vault-council/issues)
-- Discussions: [GitHub Discussions](https://github.com/yourusername/obsidian-vault-council/discussions)
+- Report issues: [GitHub Issues](https://github.com/Kyoungsoo2314/obsidian-vault-council/issues)
+- Discussions: [GitHub Discussions](https://github.com/Kyoungsoo2314/obsidian-vault-council/discussions)
