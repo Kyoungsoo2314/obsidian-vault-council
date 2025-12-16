@@ -124,6 +124,6 @@ export class OpenRouterService {
 	}
 
 	isConfigured(): boolean {
-		return this.apiKey && this.apiKey.length > 0;
+		return !!(this.apiKey && this.apiKey.length > 0);
 	}
 }
