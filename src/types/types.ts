@@ -10,9 +10,9 @@ export interface VaultCouncilSettings {
 export const DEFAULT_SETTINGS: VaultCouncilSettings = {
 	openRouterApiKey: '',
 	selectedModels: [
-		'openai/gpt-4-turbo',
-		'anthropic/claude-3.5-sonnet',
-		'google/gemini-pro-1.5'
+		'openai/gpt-5.2',
+		'anthropic/claude-4.5-sonnet-20250929',
+		'google/gemini-3-pro-preview-20251117'
 	],
 	saveLocation: 'context-based',
 	customSaveFolder: 'AI Council',
@@ -20,16 +20,29 @@ export const DEFAULT_SETTINGS: VaultCouncilSettings = {
 	maxTokens: 4000,
 };
 
-// Available models on OpenRouter
+// Available models on OpenRouter (December 2025)
 export const AVAILABLE_MODELS = [
+	// OpenAI GPT-5 Series (Latest - December 2025)
+	{ id: 'openai/gpt-5.2', name: 'GPT-5.2 🔥', provider: 'OpenAI' },
+	{ id: 'openai/gpt-5', name: 'GPT-5', provider: 'OpenAI' },
+	{ id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', provider: 'OpenAI' },
 	{ id: 'openai/gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI' },
 	{ id: 'openai/gpt-4', name: 'GPT-4', provider: 'OpenAI' },
-	{ id: 'openai/gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'OpenAI' },
+
+	// Anthropic Claude 4.5 Series (Latest - November 2025)
+	{ id: 'anthropic/claude-4.5-opus-20251124', name: 'Claude 4.5 Opus 🔥', provider: 'Anthropic' },
+	{ id: 'anthropic/claude-4.5-sonnet-20250929', name: 'Claude 4.5 Sonnet 🔥', provider: 'Anthropic' },
+	{ id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'Anthropic' },
+	{ id: 'anthropic/claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', provider: 'Anthropic' },
 	{ id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
 	{ id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus', provider: 'Anthropic' },
-	{ id: 'anthropic/claude-3-haiku', name: 'Claude 3 Haiku', provider: 'Anthropic' },
+
+	// Google Gemini 3 & 2.5 Series (Latest - November 2025)
+	{ id: 'google/gemini-3-pro-preview-20251117', name: 'Gemini 3 Pro Preview 🔥', provider: 'Google' },
+	{ id: 'google/gemini-2.5-pro-preview', name: 'Gemini 2.5 Pro Preview', provider: 'Google' },
+	{ id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google' },
+	{ id: 'google/gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'Google' },
 	{ id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5', provider: 'Google' },
-	{ id: 'google/gemini-pro', name: 'Gemini Pro', provider: 'Google' },
 ];
 
 export interface Message {
