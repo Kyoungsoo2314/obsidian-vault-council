@@ -46,32 +46,21 @@ export class CouncilView extends ItemView {
 		const titleRow = header.createEl('div', { cls: 'vault-council-title-row' });
 		titleRow.createEl('h4', { text: 'Vault Council', cls: 'vault-council-title' });
 
-		// Vault switch button
+		// Settings button
 		const switchBtn = titleRow.createEl('button', {
-			text: '⚡',
+			text: '⚙️',
 			cls: 'vault-switch-btn',
-			attr: { title: 'Open another vault' }
+			attr: { title: 'Open Vault Council settings' }
 		});
 		switchBtn.addEventListener('click', () => {
-			// Try to execute the "Open another vault" command
-			// @ts-ignore - app.commands is not in official API
-			const commands = (this.app as any).commands;
-			if (commands && commands.executeCommandById) {
-				try {
-					// Try the standard vault open command
-					commands.executeCommandById('app:open-vault');
-				} catch (e) {
-					// If that fails, try opening command palette
-					try {
-						commands.executeCommandById('command-palette:open');
-						new Notice('Search for "Open another vault" in the palette');
-					} catch (e2) {
-						// Fallback to settings
-						new Notice('Use Ctrl+O or Settings → Files & Links → Manage vaults to switch vaults');
-					}
-				}
-			} else {
-				new Notice('Use Ctrl+O or Settings → Files & Links → Manage vaults to switch vaults');
+			// @ts-ignore - app.setting is not in official API
+			const setting = (this.app as any).setting;
+			if (setting && setting.open) {
+				setting.open();
+				// Try to open our plugin's settings tab
+				setTimeout(() => {
+					setting.openTabById('vault-council');
+				}, 100);
 			}
 		});
 
