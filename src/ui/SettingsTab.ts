@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import VaultCouncilPlugin from '../../main';
+import { AVAILABLE_MODELS } from '../types/types';
 
 export class VaultCouncilSettingTab extends PluginSettingTab {
 	plugin: VaultCouncilPlugin;
@@ -15,75 +16,81 @@ export class VaultCouncilSettingTab extends PluginSettingTab {
 
 		containerEl.createEl('h2', { text: 'Vault Council Settings' });
 
-		// OpenAI API Key
-		new Setting(containerEl)
-			.setName('OpenAI API Key')
-			.setDesc('Your OpenAI API key for GPT models')
-			.addText(text => text
-				.setPlaceholder('sk-...')
-				.setValue(this.plugin.settings.openaiApiKey)
-				.onChange(async (value) => {
-					this.plugin.settings.openaiApiKey = value;
-					await this.plugin.saveSettings();
-				}));
+		// Info section
+		const infoEl = containerEl.createEl('div', { cls: 'setting-item-description' });
+		infoEl.innerHTML = `
+			This plugin uses <a href="https://openrouter.ai">OpenRouter</a> to access multiple AI models with a single API key.<br>
+			Get your API key at: <a href="https://openrouter.ai/keys">https://openrouter.ai/keys</a>
+		`;
 
-		// Anthropic API Key
+		// OpenRouter API Key
 		new Setting(containerEl)
-			.setName('Anthropic API Key')
-			.setDesc('Your Anthropic API key for Claude models')
+			.setName('OpenRouter API Key')
+			.setDesc('Your OpenRouter API key (one key for all models)')
 			.addText(text => text
-				.setPlaceholder('sk-ant-...')
-				.setValue(this.plugin.settings.anthropicApiKey)
+				.setPlaceholder('sk-or-v1-...')
+				.setValue(this.plugin.settings.openRouterApiKey)
 				.onChange(async (value) => {
-					this.plugin.settings.anthropicApiKey = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// Google API Key
-		new Setting(containerEl)
-			.setName('Google API Key')
-			.setDesc('Your Google API key for Gemini models')
-			.addText(text => text
-				.setPlaceholder('AIza...')
-				.setValue(this.plugin.settings.googleApiKey)
-				.onChange(async (value) => {
-					this.plugin.settings.googleApiKey = value;
+					this.plugin.settings.openRouterApiKey = value;
 					await this.plugin.saveSettings();
 				}));
 
 		containerEl.createEl('h3', { text: 'Model Selection' });
+		containerEl.createEl('div', {
+			cls: 'setting-item-description',
+			text: 'Select which models to use (selected models will respond in parallel)'
+		});
 
-		// GPT-4
+		// Create model selection checkboxes
+		AVAILABLE_MODELS.forEach(model => {
+			new Setting(containerEl)
+				.setName(model.name)
+				.setDesc(`${model.provider} - ${model.id}`)
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.selectedModels.includes(model.id))
+					.onChange(async (value) => {
+						if (value) {
+							// Add model
+							if (!this.plugin.settings.selectedModels.includes(model.id)) {
+								this.plugin.settings.selectedModels.push(model.id);
+							}
+						} else {
+							// Remove model
+							this.plugin.settings.selectedModels =
+								this.plugin.settings.selectedModels.filter(m => m !== model.id);
+						}
+						await this.plugin.saveSettings();
+					}));
+		});
+
+		containerEl.createEl('h3', { text: 'Advanced Settings' });
+
+		// Temperature
 		new Setting(containerEl)
-			.setName('Enable GPT-4')
-			.setDesc('Use OpenAI GPT-4 model')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enabledModels.gpt4)
+			.setName('Temperature')
+			.setDesc('Controls randomness (0 = focused, 1 = creative)')
+			.addSlider(slider => slider
+				.setLimits(0, 1, 0.1)
+				.setValue(this.plugin.settings.temperature)
+				.setDynamicTooltip()
 				.onChange(async (value) => {
-					this.plugin.settings.enabledModels.gpt4 = value;
+					this.plugin.settings.temperature = value;
 					await this.plugin.saveSettings();
 				}));
 
-		// Claude
+		// Max tokens
 		new Setting(containerEl)
-			.setName('Enable Claude')
-			.setDesc('Use Anthropic Claude model')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enabledModels.claude)
+			.setName('Max Tokens')
+			.setDesc('Maximum length of responses')
+			.addText(text => text
+				.setPlaceholder('4000')
+				.setValue(String(this.plugin.settings.maxTokens))
 				.onChange(async (value) => {
-					this.plugin.settings.enabledModels.claude = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// Gemini
-		new Setting(containerEl)
-			.setName('Enable Gemini')
-			.setDesc('Use Google Gemini model')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.enabledModels.gemini)
-				.onChange(async (value) => {
-					this.plugin.settings.enabledModels.gemini = value;
-					await this.plugin.saveSettings();
+					const num = parseInt(value);
+					if (!isNaN(num) && num > 0) {
+						this.plugin.settings.maxTokens = num;
+						await this.plugin.saveSettings();
+					}
 				}));
 
 		containerEl.createEl('h3', { text: 'Save Settings' });

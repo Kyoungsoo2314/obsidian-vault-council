@@ -1,6 +1,8 @@
-import { ItemView, WorkspaceLeaf, TFile, MarkdownView } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, MarkdownView, Notice } from 'obsidian';
 import VaultCouncilPlugin from '../../main';
 import { Message, ModelResponse } from '../types/types';
+import { OpenRouterService } from '../services/OpenRouterService';
+import { SaveManager } from '../vault/SaveManager';
 
 export const VIEW_TYPE_COUNCIL = 'vault-council-view';
 
@@ -73,6 +75,11 @@ export class CouncilView extends ItemView {
 		});
 		sendBtn.addEventListener('click', () => this.sendMessage());
 
+		const saveBtn = buttonContainer.createEl('button', {
+			text: 'Save',
+		});
+		saveBtn.addEventListener('click', () => this.saveConversation());
+
 		const clearBtn = buttonContainer.createEl('button', {
 			text: 'Clear',
 		});
@@ -123,6 +130,18 @@ export class CouncilView extends ItemView {
 		const question = this.inputEl.value.trim();
 		if (!question) return;
 
+		// Check if API key is configured
+		if (!this.plugin.settings.openRouterApiKey) {
+			new Notice('Please configure your OpenRouter API key in settings');
+			return;
+		}
+
+		// Check if models are selected
+		if (this.plugin.settings.selectedModels.length === 0) {
+			new Notice('Please select at least one model in settings');
+			return;
+		}
+
 		// Add user message
 		this.addMessage({
 			role: 'user',
@@ -135,23 +154,85 @@ export class CouncilView extends ItemView {
 		// Get context
 		const context = await this.gatherContext();
 
+		// Build system prompt with context
+		let systemPrompt = 'You are a helpful AI assistant analyzing notes in an Obsidian vault.\n\n';
+
+		if (context.currentFile) {
+			systemPrompt += `Current note: ${context.currentFile}\n`;
+			systemPrompt += `Content:\n${context.currentFileContent}\n\n`;
+		}
+
+		if (context.linkedFiles.length > 0) {
+			systemPrompt += `Linked notes (${context.linkedFiles.length}):\n`;
+			systemPrompt += context.linkedFiles.join('\n\n');
+		}
+
+		if (!context.currentFile && context.linkedFiles.length === 0) {
+			systemPrompt += 'No context available. Please answer the question based on your knowledge.';
+		}
+
 		// Show loading
 		const loadingEl = this.conversationEl.createEl('div', {
 			cls: 'message assistant loading',
-			text: 'Thinking...'
+			text: `Consulting ${this.plugin.settings.selectedModels.length} models...`
 		});
 
-		// TODO: Send to AI models
-		// For now, show placeholder
-		setTimeout(() => {
+		try {
+			// Create OpenRouter service
+			const service = new OpenRouterService(this.plugin.settings.openRouterApiKey);
+
+			// Send to all selected models in parallel
+			const results = await service.sendMessageToMultipleModels(
+				this.plugin.settings.selectedModels,
+				question,
+				systemPrompt,
+				this.plugin.settings.temperature,
+				this.plugin.settings.maxTokens
+			);
+
 			loadingEl.remove();
+
+			// Display responses from each model
+			results.forEach((result, modelId) => {
+				const modelName = this.getModelDisplayName(modelId);
+
+				if (result.error) {
+					this.addMessage({
+						role: 'assistant',
+						content: `Error: ${result.error}`,
+						model: `${modelName} ❌`,
+						timestamp: Date.now()
+					});
+				} else {
+					this.addMessage({
+						role: 'assistant',
+						content: result.response,
+						model: modelName,
+						timestamp: Date.now()
+					});
+				}
+			});
+
+		} catch (error) {
+			loadingEl.remove();
+			new Notice(`Error: ${error.message}`);
 			this.addMessage({
 				role: 'assistant',
-				content: `This is a placeholder response. Context gathered:\n- Current file: ${context.currentFile || 'none'}\n- Linked files: ${context.linkedFiles.length}\n\nYour question: "${question}"\n\nAI integration coming soon!`,
-				model: 'system',
+				content: `Error: ${error.message}`,
+				model: 'System',
 				timestamp: Date.now()
 			});
-		}, 1000);
+		}
+	}
+
+	getModelDisplayName(modelId: string): string {
+		const parts = modelId.split('/');
+		if (parts.length === 2) {
+			const provider = parts[0];
+			const model = parts[1];
+			return `${provider.charAt(0).toUpperCase() + provider.slice(1)} - ${model}`;
+		}
+		return modelId;
 	}
 
 	addMessage(message: Message) {
@@ -177,6 +258,35 @@ export class CouncilView extends ItemView {
 
 		// Scroll to bottom
 		this.conversationEl.scrollTop = this.conversationEl.scrollHeight;
+	}
+
+	async saveConversation() {
+		if (this.messages.length === 0) {
+			new Notice('No conversation to save');
+			return;
+		}
+
+		try {
+			const saveManager = new SaveManager(this.app);
+			const sourceFile = this.app.workspace.getActiveFile();
+
+			const savedFile = await saveManager.saveConversation(
+				this.messages,
+				sourceFile,
+				this.plugin.settings.saveLocation,
+				this.plugin.settings.customSaveFolder
+			);
+
+			new Notice(`Conversation saved to: ${savedFile.basename}`);
+
+			// Optionally open the saved file
+			const leaf = this.app.workspace.getLeaf('tab');
+			await leaf.openFile(savedFile);
+
+		} catch (error) {
+			console.error('Error saving conversation:', error);
+			new Notice(`Failed to save conversation: ${error.message}`);
+		}
 	}
 
 	clearConversation() {
