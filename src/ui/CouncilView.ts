@@ -59,7 +59,7 @@ export class CouncilView extends ItemView {
 				setting.open();
 				// Try to open our plugin's settings tab
 				setTimeout(() => {
-					setting.openTabById('vault-council');
+					setting.openTabById('obsidian-vault-council');
 				}, 100);
 			}
 		});
